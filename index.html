@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamGrid</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;600;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #07070a;
+      --surface:      #0f0f15;
+      --surface2:     #16161f;
+      --accent:       #c8ff45;
+      --accent-glow:  rgba(200, 255, 69, 0.12);
+      --accent-border:rgba(200, 255, 69, 0.28);
+      --danger:       #ff4455;
+      --danger-dim:   rgba(255, 68, 85, 0.14);
+      --text:         #e2e2ea;
+      --muted:        #50506a;
+      --border:       rgba(255, 255, 255, 0.07);
+      --gap:          8px;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* subtle scanline texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.04) 3px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ─── HEADER ─── */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      height: 56px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .logo span { color: var(--muted); }
+
+    .add-form {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      max-width: 500px;
+    }
+
+    .input-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .input-wrap::before {
+      content: '▶';
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    #streamInput {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 9px 12px 9px 28px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #streamInput::placeholder { color: var(--muted); }
+
+    #streamInput:focus {
+      border-color: var(--accent-border);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .btn-add {
+      flex-shrink: 0;
+      background: var(--accent);
+      color: #07070a;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn-add:hover  { opacity: 0.88; }
+    .btn-add:active { transform: scale(0.96); }
+
+    /* ─── LAYOUT LOCK ─── */
+    .layout-lock {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .layout-lock-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-right: 2px;
+    }
+
+    .btn-layout {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      padding: 5px 8px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-layout:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    .btn-layout.active {
+      background: var(--accent-glow);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    /* ─── HEADER UTILITY BUTTONS ─── */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .btn-header-action {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .btn-header-action:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    .btn-header-action.active {
+      background: var(--accent-glow);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    .btn-header-action.muted {
+      background: var(--danger-dim);
+      border-color: rgba(255,68,85,0.3);
+      color: var(--danger);
+    }
+
+    .stream-count {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .stream-count strong { color: var(--accent); }
+
+    /* ─── HIDE HEADER ─── */
+    .header {
+      transition: height 0.25s ease, padding 0.25s ease, border-color 0.25s ease;
+      overflow: hidden;
+    }
+
+    .header.hidden {
+      height: 0 !important;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-bottom-color: transparent;
+    }
+
+    #showHeaderTab {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      cursor: pointer;
+      z-index: 200;
+      transition: transform 0.25s ease, color 0.15s;
+    }
+
+    #showHeaderTab.visible { transform: translateX(-50%) translateY(0); }
+    #showHeaderTab:hover   { color: var(--accent); }
+
+    /* ─── EMPTY STATE ─── */
+    #emptyState {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 56px);
+      gap: 14px;
+      text-align: center;
+      padding: 40px 24px;
+    }
+
+    .empty-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 28px);
+      grid-template-rows: repeat(2, 17px);
+      gap: 4px;
+      margin-bottom: 8px;
+      opacity: 0.12;
+    }
+
+    .empty-grid div {
+      background: var(--text);
+      border-radius: 2px;
+    }
+
+    #emptyState h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 26px;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      opacity: 0.35;
+    }
+
+    #emptyState p {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 2;
+      max-width: 280px;
+    }
+
+    #emptyState code {
+      color: var(--accent);
+      font-size: 10px;
+    }
+
+    /* ─── GRID ─── */
+    #gridContainer {
+      display: none;
+      padding: var(--gap);
+    }
+
+    #streamGrid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--gap);
+    }
+
+    /* ─── STREAM ITEM ─── */
+    .stream-item {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+      aspect-ratio: 16 / 9;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .stream-item:hover {
+      border-color: var(--accent-border);
+      box-shadow: 0 0 0 1px var(--accent-border);
+    }
+
+    .stream-item:hover .stream-bar { opacity: 1; }
+
+    .stream-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .stream-item:hover .stream-bar { pointer-events: all; }
+
+    .stream-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--danger);
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px var(--danger);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .btn-remove {
+      background: var(--danger-dim);
+      border: 1px solid rgba(255, 68, 85, 0.3);
+      border-radius: 3px;
+      color: var(--danger);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-remove:hover { background: rgba(255, 68, 85, 0.28); }
+
+    .btn-fullscreen {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-fullscreen:hover { background: rgba(255,255,255,0.14); }
+
+    /* ─── THEATER MODE ─── */
+    #streamGrid.theater {
+      display: grid !important;
+      grid-template-columns: calc(70% - 4px) calc(30% - 4px);
+      grid-auto-rows: max-content;
+      justify-content: unset;
+    }
+
+    #streamGrid.theater .theater-main {
+      grid-column: 1;
+      /* grid-row set by JS to span sidebar count */
+      width: auto !important;
+      flex-basis: auto !important;
+      aspect-ratio: unset !important;
+      align-self: stretch;
+    }
+
+    #streamGrid.theater .stream-item:not(.theater-main) {
+      grid-column: 2;
+      width: auto !important;
+      flex-basis: auto !important;
+      aspect-ratio: 16 / 9;
+    }
+
+    .btn-theater {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-theater:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+    .btn-theater.active { color: var(--accent); border-color: var(--accent-border); background: var(--accent-glow); }
+
+    /* ─── DRAG & DROP ─── */
+    .drag-handle {
+      cursor: grab;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1;
+      padding: 4px 6px;
+      border-radius: 3px;
+      transition: color 0.15s;
+      user-select: none;
+    }
+
+    .drag-handle:hover { color: var(--text); }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* transparent shield over iframe so drag isn't hijacked */
+    .drag-shield {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+    }
+
+    .stream-item.dragging .drag-shield { display: block; }
+    /* also shield ALL other tiles while any drag is active */
+    #streamGrid.drag-active .drag-shield { display: block; }
+
+    .stream-item.dragging {
+      opacity: 0.45;
+      border-color: var(--accent-border) !important;
+      box-shadow: 0 0 0 2px var(--accent-border) !important;
+    }
+
+    .stream-item.drag-over {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px var(--accent), 0 0 20px var(--accent-glow) !important;
+    }
+
+    /* fullscreen: stretch tile to cover viewport */
+    .stream-item:fullscreen,
+    .stream-item:-webkit-full-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      aspect-ratio: unset;
+      border-radius: 0;
+      border: none;
+    }
+
+    .stream-item:fullscreen .stream-bar,
+    .stream-item:-webkit-full-screen .stream-bar {
+      opacity: 0;
+    }
+
+    .stream-item:fullscreen:hover .stream-bar,
+    .stream-item:-webkit-full-screen:hover .stream-bar {
+      opacity: 1;
+    }
+
+    .stream-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* fade-in for new tiles */
+    .stream-item { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ─── PRESETS ─── */
+    .presets-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .presets-dropdown {
+      display: none;
+      position: fixed;
+      /* top + right set by JS on open */
+      min-width: 220px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      z-index: 300;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.65);
+      overflow: hidden;
+    }
+
+    .presets-dropdown.open { display: block; }
+
+    /* save bar at top */
+    .preset-save-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .preset-save-bar input {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 6px 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .preset-save-bar input::placeholder { color: var(--muted); }
+    .preset-save-bar input:focus { border-color: var(--accent-border); }
+
+    .preset-save-bar button {
+      background: var(--accent);
+      color: #07070a;
+      border: none;
+      border-radius: 3px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 6px 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+
+    .preset-save-bar button:hover { opacity: 0.85; }
+
+    /* preset rows */
+    .preset-rows {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .preset-rows::-webkit-scrollbar { width: 3px; }
+    .preset-rows::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+
+    .preset-empty-msg {
+      padding: 14px 12px;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .preset-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preset-row:last-child { border-bottom: none; }
+
+    /* the big load button takes all the space */
+    .preset-row-load {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      text-align: left;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      overflow: hidden;
+    }
+
+    .preset-row-load:hover { background: rgba(200,255,69,0.07); color: var(--accent); }
+
+    .preset-row-name {
+      display: block;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preset-row-sub {
+      display: block;
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preset-row-del {
+      flex-shrink: 0;
+      background: transparent;
+      border: none;
+      border-left: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      padding: 0 12px;
+      height: 100%;
+      min-height: 44px;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .preset-row-del:hover { color: var(--danger); background: var(--danger-dim); }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 10px 20px;
+      z-index: 9998;
+      white-space: nowrap;
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: none;
+    }
+
+    #toast.show  { transform: translateX(-50%) translateY(0); }
+    #toast.error { border-color: rgba(255,68,85,0.4); color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">Stream<span>Grid</span></div>
+
+    <div class="add-form">
+      <div class="input-wrap">
+        <input id="streamInput" type="text"
+               placeholder="twitch.tv/channel  or  channelname"
+               autocomplete="off" autocorrect="off" spellcheck="false" />
+      </div>
+      <button class="btn-add" id="addBtn">+ Add</button>
+    </div>
+
+    <div class="layout-lock">
+      <span class="layout-lock-label">Grid</span>
+      <button class="btn-layout active" data-cols="0">Auto</button>
+      <button class="btn-layout" data-cols="1">1</button>
+      <button class="btn-layout" data-cols="2">2</button>
+      <button class="btn-layout" data-cols="3">3</button>
+      <button class="btn-layout" data-cols="4">4</button>
+    </div>
+
+    <div class="header-actions">
+      <span class="stream-count" id="countDisplay">0 streams</span>
+      <button class="btn-header-action" id="muteAllBtn">🔇 Mute All</button>
+      <div class="presets-wrap">
+        <button class="btn-header-action" id="presetsBtn">▾ Presets</button>
+        <div class="presets-dropdown" id="presetsDropdown">
+          <div class="preset-save-bar">
+            <input type="text" id="presetNameInput" placeholder="Name & save current…" autocomplete="off" />
+            <button id="savePresetBtn">Save</button>
+          </div>
+          <div class="preset-rows" id="presetRows"></div>
+        </div>
+      </div>
+      <button class="btn-header-action" id="hideHeaderBtn" title="Hide header (H)">↑ Hide</button>
+    </div>
+  </header>
+
+  <button id="showHeaderTab">▼ Show</button>
+
+  <!-- Empty state -->
+  <div id="emptyState">
+    <div class="empty-grid">
+      <div></div><div></div><div></div>
+      <div></div><div></div><div></div>
+    </div>
+    <h2>No Streams Active</h2>
+    <p>
+      Type a channel name or paste a URL above.<br>
+      e.g. <code>twitch.tv/shroud</code> or just <code>shroud</code>
+    </p>
+  </div>
+
+  <!-- Stream grid -->
+  <div id="gridContainer">
+    <div id="streamGrid"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const streams    = [];
+    let   allMuted   = false;
+    const input      = document.getElementById('streamInput');
+    const addBtn     = document.getElementById('addBtn');
+    const grid       = document.getElementById('streamGrid');
+    const gridWrap   = document.getElementById('gridContainer');
+    const empty      = document.getElementById('emptyState');
+    const countEl    = document.getElementById('countDisplay');
+    const toastEl    = document.getElementById('toast');
+
+    function buildSrc(channel, muted) {
+      const host   = window.location.hostname || 'localhost';
+      const params = new URLSearchParams({ channel, parent: host, autoplay: 'true', muted: muted ? 'true' : 'false' });
+      if (host !== 'localhost') params.append('parent', 'localhost');
+      return `https://player.twitch.tv/?${params}`;
+    }
+
+    // ── Toast ──────────────────────────────────────────────
+    let toastTimer;
+    function toast(msg, isError = false) {
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.className   = isError ? 'error' : '';
+      void toastEl.offsetWidth;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+    }
+
+    // ── Parse channel name from URL or raw input ───────────
+    function parseChannel(raw) {
+      raw = raw.trim();
+      if (!raw) return null;
+      const m = raw.match(/(?:twitch\.tv\/)([a-zA-Z0-9_]{1,25})/i);
+      if (m) return m[1].toLowerCase();
+      if (/^[a-zA-Z0-9_]{1,25}$/.test(raw)) return raw.toLowerCase();
+      return null;
+    }
+
+    // ── Layout lock ────────────────────────────────────────
+    let lockedCols = 0; // 0 = auto
+
+    document.querySelectorAll('.btn-layout').forEach(btn => {
+      btn.addEventListener('click', () => {
+        lockedCols = parseInt(btn.dataset.cols);
+        document.querySelectorAll('.btn-layout').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        localStorage.setItem('streamgrid_cols', lockedCols);
+        relayout();
+      });
+    });
+
+    // ── Determine columns for N streams ───────────────────
+    function getCols(n) {
+      if (lockedCols > 0) return lockedCols;
+      if (n === 1) return 1;
+      if (n === 2) return 2;
+      if (n === 3) return 3;
+      if (n <= 4)  return 2;
+      if (n <= 6)  return 3;
+      if (n <= 8)  return 4;
+      if (n <= 9)  return 3;
+      return 4;
+    }
+
+    // ── Recompute all item widths ──────────────────────────
+    function relayout() {
+      const n    = streams.length;
+      const cols = getCols(n);
+      const gap  = 8; // px, matches --gap
+
+      // Each item: (100% - (cols-1)*gap) / cols
+      const basis = `calc(${(100 / cols).toFixed(4)}% - ${((cols - 1) * gap / cols).toFixed(2)}px)`;
+
+      document.querySelectorAll('.stream-item').forEach(el => {
+        el.style.flexBasis = basis;
+        el.style.width     = basis;
+      });
+
+      // Counter
+      countEl.innerHTML = n === 0
+        ? '0 streams'
+        : `<strong>${n}</strong> stream${n !== 1 ? 's' : ''}`;
+
+      // Toggle empty / grid
+      if (n === 0) {
+        empty.style.display   = 'flex';
+        gridWrap.style.display = 'none';
+      } else {
+        empty.style.display   = 'none';
+        gridWrap.style.display = 'block';
+      }
+
+      // Keep theater main span in sync
+      if (typeof theaterChannel !== 'undefined' && theaterChannel) {
+        const main = grid.querySelector('.theater-main');
+        if (main) main.style.gridRow = `1 / span ${Math.max(n - 1, 1)}`;
+      }
+    }
+
+    // ── Add stream ─────────────────────────────────────────
+    function addStream(channel) {
+      if (streams.includes(channel)) {
+        toast(`${channel} is already open`, true);
+        return;
+      }
+      streams.push(channel);
+
+      const src = buildSrc(channel, allMuted);
+
+      const item = document.createElement('div');
+      item.className          = 'stream-item';
+      item.dataset.channel    = channel;
+
+      item.innerHTML = `
+        <div class="drag-shield"></div>
+        <div class="stream-bar">
+          <span class="drag-handle" title="Drag to reorder">⠿</span>
+          <span class="stream-label">
+            <span class="live-dot"></span>${channel}
+          </span>
+          <button class="btn-theater" title="Theater mode">⊞</button>
+          <button class="btn-fullscreen" title="Fullscreen (F)">⛶</button>
+          <button class="btn-remove" title="Remove stream">✕ remove</button>
+        </div>
+        <iframe class="stream-iframe"
+          src="${src}"
+          allowfullscreen
+          allow="autoplay; fullscreen"
+          scrolling="no"
+          frameborder="0"
+          title="${channel} stream">
+        </iframe>`;
+
+      initDrag(item);
+
+      item.querySelector('.btn-theater').addEventListener('click', () => {
+        toggleTheater(channel);
+      });
+
+      item.querySelector('.btn-fullscreen').addEventListener('click', () => {
+        toggleFullscreen(item);
+      });
+
+      item.querySelector('.btn-remove').addEventListener('click', () => {
+        removeStream(channel);
+      });
+
+      grid.appendChild(item);
+      relayout();
+      saveStreams();
+      toast(`Added ${channel}`);
+    }
+
+    // ── Remove stream ──────────────────────────────────────
+    function removeStream(channel) {
+      const idx = streams.indexOf(channel);
+      if (idx !== -1) streams.splice(idx, 1);
+
+      const el = grid.querySelector(`[data-channel="${channel}"]`);
+      if (el) {
+        el.style.transition = 'opacity 0.2s, transform 0.2s';
+        el.style.opacity    = '0';
+        el.style.transform  = 'scale(0.95)';
+        setTimeout(() => { el.remove(); relayout(); saveStreams(); }, 210);
+      }
+    }
+
+    // ── Events ─────────────────────────────────────────────
+    addBtn.addEventListener('click', handleAdd);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') handleAdd(); });
+
+    function handleAdd() {
+      const channel = parseChannel(input.value);
+      if (!channel) {
+        toast('Enter a valid Twitch channel or URL', true);
+        input.focus();
+        return;
+      }
+      addStream(channel);
+      input.value = '';
+      input.focus();
+    }
+
+    // ── Fullscreen ────────────────────────────────────────
+    function toggleFullscreen(el) {
+      if (document.fullscreenElement === el) {
+        document.exitFullscreen();
+      } else {
+        el.requestFullscreen().catch(() => {});
+      }
+    }
+
+    // double-click a tile to fullscreen
+    document.getElementById('streamGrid').addEventListener('dblclick', e => {
+      const item = e.target.closest('.stream-item');
+      if (item) toggleFullscreen(item);
+    });
+
+    // Esc is handled natively by the browser; F key as shortcut
+    document.addEventListener('keydown', e => {
+      if (e.key === 'f' || e.key === 'F') {
+        const hovered = document.querySelector('.stream-item:hover');
+        if (hovered) toggleFullscreen(hovered);
+      }
+    });
+
+    // ── Drag to reorder ───────────────────────────────────
+    let dragSrc = null;
+
+    function initDrag(item) {
+      item.setAttribute('draggable', 'true');
+
+      item.addEventListener('dragstart', e => {
+        dragSrc = item;
+        item.classList.add('dragging');
+        grid.classList.add('drag-active');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.dataset.channel);
+      });
+
+      item.addEventListener('dragend', () => {
+        dragSrc = null;
+        item.classList.remove('dragging');
+        grid.classList.remove('drag-active');
+        document.querySelectorAll('.stream-item').forEach(el => el.classList.remove('drag-over'));
+      });
+
+      item.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (item !== dragSrc) item.classList.add('drag-over');
+      });
+
+      item.addEventListener('dragleave', () => {
+        item.classList.remove('drag-over');
+      });
+
+      item.addEventListener('drop', e => {
+        e.preventDefault();
+        item.classList.remove('drag-over');
+        if (!dragSrc || dragSrc === item) return;
+
+        // Swap DOM positions
+        const allItems = [...grid.querySelectorAll('.stream-item')];
+        const srcIdx   = allItems.indexOf(dragSrc);
+        const tgtIdx   = allItems.indexOf(item);
+
+        if (srcIdx < tgtIdx) {
+          grid.insertBefore(dragSrc, item.nextSibling);
+        } else {
+          grid.insertBefore(dragSrc, item);
+        }
+
+        // Sync streams array to match new DOM order
+        streams.length = 0;
+        grid.querySelectorAll('.stream-item').forEach(el => streams.push(el.dataset.channel));
+        saveStreams();
+      });
+    }
+
+    // ── Theater mode ─────────────────────────────────────
+    let theaterChannel = null;
+
+    function toggleTheater(channel) {
+      // Exit if clicking the current theater stream
+      if (theaterChannel === channel) {
+        theaterChannel = null;
+        grid.classList.remove('theater');
+        grid.querySelectorAll('.theater-main').forEach(el => {
+          el.classList.remove('theater-main');
+          el.style.gridRow = '';
+          el.querySelector('.btn-theater').classList.remove('active');
+        });
+        relayout();
+        return;
+      }
+
+      // Exit any previous theater
+      if (theaterChannel) {
+        const prev = grid.querySelector('.theater-main');
+        if (prev) {
+          prev.classList.remove('theater-main');
+          prev.style.gridRow = '';
+          prev.querySelector('.btn-theater').classList.remove('active');
+        }
+      }
+
+      theaterChannel = channel;
+      const item = grid.querySelector(`[data-channel="${channel}"]`);
+      if (!item) return;
+
+      item.classList.add('theater-main');
+      item.querySelector('.btn-theater').classList.add('active');
+      grid.classList.add('theater');
+
+      // Span as many rows as there are sidebar items (min 1)
+      const sideCount = Math.max(streams.length - 1, 1);
+      item.style.gridRow = `1 / span ${sideCount}`;
+    }
+
+    // ── Hide / show header ────────────────────────────────
+    const header       = document.querySelector('.header');
+    const hideHeaderBtn = document.getElementById('hideHeaderBtn');
+    const showHeaderTab = document.getElementById('showHeaderTab');
+
+    function setHeaderVisible(visible) {
+      header.classList.toggle('hidden', !visible);
+      showHeaderTab.classList.toggle('visible', !visible);
+      localStorage.setItem('streamgrid_header', visible ? '1' : '0');
+    }
+
+    hideHeaderBtn.addEventListener('click', () => setHeaderVisible(false));
+    showHeaderTab.addEventListener('click', () => setHeaderVisible(true));
+
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'h' || e.key === 'H') && e.target === document.body) {
+        setHeaderVisible(header.classList.contains('hidden'));
+      }
+    });
+
+    // ── Mute all ──────────────────────────────────────────
+    const muteAllBtn = document.getElementById('muteAllBtn');
+
+    function setMuteAll(muted) {
+      allMuted = muted;
+      document.querySelectorAll('.stream-item').forEach(el => {
+        el.querySelector('.stream-iframe').src = buildSrc(el.dataset.channel, muted);
+      });
+      muteAllBtn.textContent = muted ? '🔊 Unmute All' : '🔇 Mute All';
+      muteAllBtn.classList.toggle('muted', muted);
+    }
+
+    muteAllBtn.addEventListener('click', () => setMuteAll(!allMuted));
+
+    // ── Presets ────────────────────────────────────────────
+    const presetsBtn      = document.getElementById('presetsBtn');
+    const presetsDropdown = document.getElementById('presetsDropdown');
+    const presetNameInput = document.getElementById('presetNameInput');
+    const savePresetBtn   = document.getElementById('savePresetBtn');
+    const presetRowsEl    = document.getElementById('presetRows');
+
+    function getPresets() {
+      try { return JSON.parse(localStorage.getItem('streamgrid_presets') || '{}'); }
+      catch { return {}; }
+    }
+
+    function putPresets(p) {
+      localStorage.setItem('streamgrid_presets', JSON.stringify(p));
+    }
+
+    function renderPresets() {
+      const p    = getPresets();
+      const keys = Object.keys(p);
+      if (keys.length === 0) {
+        presetRowsEl.innerHTML = '<div class="preset-empty-msg">No presets saved yet.</div>';
+        return;
+      }
+      presetRowsEl.innerHTML = keys.map(name => `
+        <div class="preset-row">
+          <button class="preset-row-load" data-load="${name}">
+            <span class="preset-row-name">${name}</span>
+            <span class="preset-row-sub">${p[name].join(' · ')}</span>
+          </button>
+          <button class="preset-row-del" data-del="${name}" title="Delete">✕</button>
+        </div>`).join('');
+    }
+
+    presetRowsEl.addEventListener('click', e => {
+      const loadName = e.target.closest('[data-load]')?.dataset.load;
+      const delName  = e.target.closest('[data-del]')?.dataset.del;
+      const p        = getPresets();
+
+      if (loadName && p[loadName]) {
+        [...streams].forEach(ch => removeStream(ch));
+        setTimeout(() => {
+          p[loadName].forEach(ch => addStream(ch));
+          closePresets();
+          toast(`Loaded "${loadName}"`);
+        }, 220);
+      }
+
+      if (delName) {
+        delete p[delName];
+        putPresets(p);
+        renderPresets();
+        toast(`Deleted "${delName}"`);
+      }
+    });
+
+    savePresetBtn.addEventListener('click', () => {
+      const name = presetNameInput.value.trim();
+      if (!name) { presetNameInput.focus(); return; }
+      if (streams.length === 0) { toast('No streams open to save', true); return; }
+      const p = getPresets();
+      p[name] = [...streams];
+      putPresets(p);
+      renderPresets();
+      presetNameInput.value = '';
+      toast(`Saved "${name}"`);
+    });
+
+    presetNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') savePresetBtn.click(); });
+
+    function closePresets() {
+      presetsDropdown.classList.remove('open');
+      presetsBtn.classList.remove('active');
+    }
+
+    presetsBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const opening = !presetsDropdown.classList.contains('open');
+      if (opening) {
+        const rect = presetsBtn.getBoundingClientRect();
+        presetsDropdown.style.top   = (rect.bottom + 6) + 'px';
+        presetsDropdown.style.right = (window.innerWidth - rect.right) + 'px';
+        presetsDropdown.style.left  = 'auto';
+        renderPresets();
+      }
+      presetsDropdown.classList.toggle('open', opening);
+      presetsBtn.classList.toggle('active', opening);
+      if (opening) presetNameInput.focus();
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.presets-wrap')) closePresets();
+    });
+
+    // ── Persistence ───────────────────────────────────────
+    function saveStreams() {
+      localStorage.setItem('streamgrid_channels', JSON.stringify(streams));
+    }
+
+    function loadStreams() {
+      try {
+        // Restore layout lock
+        const savedCols = parseInt(localStorage.getItem('streamgrid_cols') || '0');
+        if (savedCols >= 0) {
+          lockedCols = savedCols;
+          document.querySelectorAll('.btn-layout').forEach(b => {
+            b.classList.toggle('active', parseInt(b.dataset.cols) === savedCols);
+          });
+        }
+        // Restore header visibility
+        if (localStorage.getItem('streamgrid_header') === '0') setHeaderVisible(false);
+
+        // Restore streams
+        const saved = JSON.parse(localStorage.getItem('streamgrid_channels') || '[]');
+        saved.forEach(ch => addStream(ch));
+      } catch {}
+    }
+
+    // ── Init ───────────────────────────────────────────────
+    relayout();
+    loadStreams();
+    input.focus();
+  </script>
+</body>
+</html>
