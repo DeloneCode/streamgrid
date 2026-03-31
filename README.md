@@ -2,7 +2,7 @@
 
 A single-file web app to watch multiple Twitch streams simultaneously in a smart auto-adjusting grid.
 
-![StreamGrid Screenshot](Screenshot.png)
+![StreamGrid Screenshot](Screenshot.png) ![StreamGrid Screenshot 2](Screenshot1.png)
 
 ---
 
