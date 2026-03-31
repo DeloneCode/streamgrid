@@ -75,6 +75,21 @@
 
     .logo span { color: var(--muted); }
 
+    .brand-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .brand-center span { color: var(--muted); }
+
     .add-form {
       display: flex;
       gap: 8px;
@@ -690,6 +705,7 @@
 
   <header class="header">
     <div class="logo">Stream<span>Grid</span></div>
+    <div class="brand-center">DELONE<span>CODE</span></div>
 
     <div class="add-form">
       <div class="input-wrap">
