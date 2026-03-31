@@ -76,7 +76,8 @@
     .logo span { color: var(--muted); }
 
     .brand-center {
-      position: absolute;
+      position: fixed;
+      bottom: 14px;
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Barlow Condensed', sans-serif;
@@ -87,6 +88,7 @@
       color: var(--accent);
       white-space: nowrap;
       pointer-events: none;
+      z-index: 50;
     }
     .brand-center span { color: var(--muted); }
 
@@ -705,7 +707,7 @@
 
   <header class="header">
     <div class="logo">Stream<span>Grid</span></div>
-    <div class="brand-center">DELONE<span>CODE</span></div>
+
 
     <div class="add-form">
       <div class="input-wrap">
@@ -1221,5 +1223,6 @@
     loadStreams();
     input.focus();
   </script>
+  <div class="brand-center">DELONE<span>CODE</span></div>
 </body>
 </html>
